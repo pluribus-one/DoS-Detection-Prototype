@@ -1,0 +1,9 @@
+version: "3"
+
+services:
+  demo-ecommerce:
+    image: bkimminich/juice-shop
+    ports:
+      - 9080:3000
+
+  proxy:
