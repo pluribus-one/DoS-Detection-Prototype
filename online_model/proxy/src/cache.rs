@@ -110,8 +110,13 @@ impl Handler for IpsCache {
                 None             => req.remote_addr().as_ipv6().unwrap().to_string(),
             };
 
-        let entry = self.increment_counter(remote_addr.split(':').collect::<Vec<&str>>()[0]);
+        let entry = 
+            self.increment_counter(
+                remote_addr.split(':')
+                    .collect::<Vec<&str>>()[0]
+            );
 
+        // TODO: It is suboptimal, should be better share the cache
         depot.insert("n_req", entry.value().clone());
 
         ctrl.call_next(req, depot, res).await;

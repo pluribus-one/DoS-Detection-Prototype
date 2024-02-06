@@ -3,13 +3,9 @@ pub mod config;
 pub mod cache;
 pub mod utils;
 pub mod blocker;
+pub mod metrics;
 
 
-use blocker::Blocker;
-use salvo::conn::rustls::{
-    Keycert,
-    RustlsConfig
-};
 use salvo::{
     prelude::*,
     Listener,
@@ -17,25 +13,8 @@ use salvo::{
 };
 use config::Config;
 use cache::IpsCache;
+use blocker::Blocker;
 
-
-/// Loads TLS configuration.
-fn load_tls_config(
-    config: &Config
-) -> RustlsConfig
-{
-    RustlsConfig::new(
-        Keycert::new()
-            .cert(
-                std::fs::read_to_string(config.ssl_certificate())
-                    .unwrap()
-            )
-            .key(
-                std::fs::read_to_string(config.ssl_key())
-                    .unwrap()
-            )
-    )
-}
 
 fn load_proxy_config(
     config: &Config
@@ -49,6 +28,17 @@ fn load_proxy_config(
             .goal(Proxy::default_hyper_client(config.upstream().to_string()))
     ).hoop(Logger::new())
 }
+
+// fn load_http_config(
+//
+// ) -> Service
+// {
+//     Service::new(
+//         Router::new()
+//             .path("/metrics")
+//             .post(goal)
+//     ).hoop(Logger::new())
+// }
 
 /// Start a HTTP server.
 async fn start_http_server(
@@ -68,25 +58,6 @@ async fn start_http_server(
     server.serve(service).await
 }
 
-/// Start a HTTPS server.
-async fn start_https_server(
-    service: Service,
-    config : &Config
-)
-{
-    let acceptor =
-        TcpListener::new("0.0.0.0:443")
-            .rustls(load_tls_config(config))
-            .bind()
-            .await;
-
-    let server = Server::new(acceptor);
-    let handle = server.handle();
-
-    tokio::spawn(signals::listen_shutdown_signal(handle));
-
-    server.serve(service).await
-}
 
 #[tokio::main]
 async fn main() {
@@ -96,9 +67,5 @@ async fn main() {
 
     let router = load_proxy_config(&config);
 
-    if config.tls() {
-        start_https_server(router, &config).await;
-    } else {
-        start_http_server(router).await;
-    }
+    start_http_server(router).await;
 }
