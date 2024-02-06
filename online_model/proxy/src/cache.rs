@@ -1,7 +1,10 @@
 //! Cache
 
 use moka::sync::Cache;
-use salvo::Handler;
+use salvo::{
+    Handler,
+    prelude::*
+};
 use std::time::Duration;
 use async_trait::async_trait;
 use crate::utils::get_current_time;
@@ -19,16 +22,6 @@ pub struct Entry {
 }
 
 impl Entry {
-    pub fn new() -> Self
-    {
-        let timestamp = get_current_time();
-        Self {
-            counter     : 1,
-            first_seen  : timestamp,
-            last_seen   : timestamp,
-        }
-    }
-
     /// Returns the counter value.
     pub fn counter(&self) -> u32 {
         self.counter
@@ -53,11 +46,22 @@ impl Entry {
     }
 }
 
-/// A wrapper to `moka::sync::Cache`.
-pub struct IPsCache(Cache<String, Entry>);
+impl Default for Entry {
+    fn default() -> Self {
+        let timestamp = get_current_time();
+        Self {
+            counter     : 1,
+            first_seen  : timestamp,
+            last_seen   : timestamp,
+        }
+    }
+}
 
-impl IPsCache {
-    /// Create a new `IPsCache`.
+/// A wrapper to `moka::sync::Cache`.
+pub struct IpsCache(Cache<String, Entry>);
+
+impl IpsCache {
+    /// Create a new `IpsCache`.
     pub fn new(
         tti: u64
     ) -> Self
@@ -72,7 +76,7 @@ impl IPsCache {
 
     /// Increase or inizialize a counter for a provided IP.
     pub fn increment_counter(
-        &mut self,
+        &self,
         ip: &str
     ) -> moka::Entry<String, Entry>
     {
@@ -84,28 +88,31 @@ impl IPsCache {
                     entry.into_value().increment_counter()
                 } else {
                     // The entry does not exist, insert a new value.
-                    Entry::new()
+                    Entry::default()
                 }
             })
     }
 }
 
 #[async_trait]
-impl Handler for IPsCache {
+impl Handler for IpsCache {
     async fn handle(
         &self,
-        req     : &mut salvo::prelude::Request,
-        depot   : &mut salvo::prelude::Depot,
-        res     : &mut salvo::prelude::Response,
-        ctrl    : &mut salvo::prelude::FlowCtrl
+        req     : &mut Request,
+        depot   : &mut Depot,
+        res     : &mut Response,
+        ctrl    : &mut FlowCtrl
     )
     {
-        let remote_ip_address = 
-            match req.remote_addr().as_ipv6() {
-                Ok(Soem)
-            }
+        let remote_addr =
+            match req.remote_addr().as_ipv4() {
+                Some(ip_address) => ip_address.to_string(),
+                None             => req.remote_addr().as_ipv6().unwrap().to_string(),
+            };
 
-        self.increment_counter(ip)
+        let entry = self.increment_counter(remote_addr.split(':').collect::<Vec<&str>>()[0]);
+
+        depot.insert("n_req", entry.value().clone());
 
         ctrl.call_next(req, depot, res).await;
     }

@@ -2,7 +2,10 @@ pub mod signals;
 pub mod config;
 pub mod cache;
 pub mod utils;
+pub mod blocker;
 
+
+use blocker::Blocker;
 use salvo::conn::rustls::{
     Keycert,
     RustlsConfig
@@ -13,6 +16,7 @@ use salvo::{
     logging::Logger,
 };
 use config::Config;
+use cache::IpsCache;
 
 
 /// Loads TLS configuration.
@@ -40,7 +44,8 @@ fn load_proxy_config(
     Service::new(
         Router::new()
             .path("<**rest>")
-            .hoop()
+            .hoop(IpsCache::new(60))
+            .hoop(Blocker)
             .goal(Proxy::default_hyper_client(config.upstream().to_string()))
     ).hoop(Logger::new())
 }
