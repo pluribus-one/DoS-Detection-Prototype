@@ -6,14 +6,14 @@ import re
 import time
 import matplotlib.pyplot as plt
 from statistics import mean 
-from scipy import interpolate
+from scipy.interpolate import interp1d
 from scipy.interpolate import CubicSpline
 from scipy.interpolate import interp1d
 import numpy as np
+import plateau
 
 # Example DataFrame
-df = pd.read_csv('./features/features.csv')
-
+df = pd.read_csv('features.csv')
 
 # Function to convert date string to Unix timestamp
 def to_unix_timestamp(date_str):
@@ -59,7 +59,6 @@ for _, row in df.iterrows():
         window = shift_right(row['unix_timestamp'], w)
         count[window][ip] += 1
 
-# 
 for window, ips in count.items():
     ips_values = ips.values()
     total_sources = len(ips)
@@ -77,8 +76,6 @@ for window, ips in count.items():
     diffs = [(prob_cumulative[i+1] - prob_cumulative[i]) / (Ni_list[i+1] - Ni_list[i]) for i in range(len(Ni_list)-1)]
     if not diffs:
         diffs = Ni_list
-
-    #print(Ni_list[diffs.index(min(diffs))])
     
     match 10 - len(str(window)):
         case 1:
@@ -92,97 +89,66 @@ for window, ips in count.items():
         case 3: 
             Nt[3].append(Ni_list[diffs.index(min(diffs))])
             Ni_list_plot[2].extend(Ni_list)
-            prob_list_plot[2].extend(prob_cumulative)
+            prob_list_plot[2].extend(prob_cumulative)    
+
+def save_data(path, item):
+    with open(path, "w") as f:
+        f.writelines(item)
+    f.close()
+      
+def plot_curve(window):        
+    x = Ni_list_plot[window]
+    y = prob_list_plot[window]
+
+    # Pair the elements from both lists
+    paired_lists = list(zip(x, y)) 
+    # Sort based on the values in the first list
+    sorted_pairs = sorted(paired_lists, key=lambda x: x[0]) 
+    # Unpack the sorted pairs into separate lists
+    x, y = zip(*sorted_pairs)
+
+    set_x = []
+    set_y = []
+    avg = 0
+    count = 0
+
+    for index, l in enumerate(x):
+        #print(index, l)
+        if l in set_x:
+            count += 1
+            set_y[-1] = (set_y[-1][0] + y[index]) , count
+        elif l not in set_x:
+            count = 1
+            set_x.append(l)
+            #avg = y[index]
+            set_y.append((y[index], count))
+
+    set_y = [l / c for l, c in set_y]
+    set_y_perc = [item * 100 for item in set_y]
+
+    f = interp1d(set_x, set_y_perc, kind='quadratic')
+
+    # Creating new x values for interpolation
+    set_x_interp = np.linspace(min(set_x), max(set_x), num=len(set_x)*10)
+
+    # Interpolated y values
+    set_y_interp = f(set_x_interp)
+
+    # Save data
+    # save_data("data_window_" + str(window) + ".txt", (str(set_x_interp.tolist()), str(set_y_interp.tolist())))
     
+    marker = plateau.find_plateau_position(set_x_interp, set_y_interp)
+    plt.plot(marker[0], marker[1], marker='o', markersize=5, color='red', label='Marker')
+    plt.plot(set_x_interp, set_y_interp)
+    plt.grid()
+    plt.title("Probability p(n <= N) = fraction of clients generating max N requests")
+    plt.xlabel("Numer of requests N")
+    plt.ylabel("p(n<=N) %")
+    plt.savefig("plot.pdf")
 
 
-#print(Nt)
-            
-#print(Ni_list_plot[0])
-#print(prob_list_plot[0])
-            
+for w in range(0, num_window):
+    plot_curve(w)
 
-            
-#plt.plot(Ni_list_plot[0], prob_list_plot[0])
-#plt.show()
-#plt.savefig("plot.png")
-            
-x = Ni_list_plot[0]
-y = prob_list_plot[0]
-
-# Pair the elements from both lists
-paired_lists = list(zip(x, y)) 
-# Sort based on the values in the first list
-sorted_pairs = sorted(paired_lists, key=lambda x: x[0]) 
-# Unpack the sorted pairs into separate lists
-x, y = zip(*sorted_pairs)
-
-set_x = []
-set_y = []
-avg = 0
-count = 0
-
-for index, l in enumerate(x):
-    #print(index, l)
-    if l in set_x:
-        count += 1
-        set_y[-1] = (set_y[-1][0] + y[index]) , count
-    elif l not in set_x:
-        count = 1
-        set_x.append(l)
-        #avg = y[index]
-        set_y.append((y[index], count))
-
-set_y = [l / c for l, c in set_y]
-set_y_perc = [item * 100 for item in set_y]
-
-print(set_x)
-print(set_y)
-print(len(set_x))
-print(len(set_y))
-
-plt.plot(set_x, set_y_perc)
-plt.grid()
-plt.xlabel("Numer of requests N")
-plt.ylabel("p(n<=N) %")
 plt.show()
 
-#print(x)
-#print(y)
-
-"""
-for Ni in Ni_list_plot[0]:
-    indexes = [i for i in range(len(Ni_list_plot[0])) if Ni_list_plot[0][i] == Ni]
-    [Ni_list_plot[0].pop(i) for i in indexes]
-    [value for index, value in enumerate(my_list) if index not in indices_to_remove]
-    #print(indexes)
-    p = [prob_list_plot[0].pop(i) for i in indexes]
-    print(mean(p))
-
-
-# Set up the plot
-plt.figure(figsize=(10, 6))
-
-# Colors for different lines
-colors = ['b', 'g', 'r']
-
-# Plot each pair of Ni and probability values
-for i in range(len(Ni_list_plot)):
-    plt.plot(Ni_list_plot[i], prob_list_plot[i], color=colors[i], label=f'Window {i+1}')
-
-# Add labels and title
-plt.xlabel('Ni values')
-plt.ylabel('Probability')
-plt.title('Probability Distribution for Different Windows')
-plt.legend()
-
-# Show the plot
-plt.show()
-
-
-
-#plt.plot(prob_list_plot[0], Ni_list_plot[0])
-#plt.plot(Ni_list_plot[1], prob_list_plot[1])
-#plt.plot(Ni_list_plot[2], prob_list_plot[2])
-#plt.show()
-"""
