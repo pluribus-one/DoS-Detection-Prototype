@@ -1,4 +1,12 @@
-import matplotlib.pyplot as plt
+from cvn import CVN
+import pandas as pd
+from utils import to_unix_timestamp
 
-plt.plot([1, 2, 3], [10, 20, 30])
-plt.show()
+df = pd.read_csv('features.csv')
+df['unix_timestamp'] = df['timestamp'].apply(to_unix_timestamp)
+
+#clf = CVN()
+#clf.fit(df)
+
+
+

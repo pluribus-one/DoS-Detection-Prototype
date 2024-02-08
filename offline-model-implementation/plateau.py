@@ -11,16 +11,3 @@ def find_plateau_position(x, y, threshold=0.1, min_length=10):
                 return plateau_x, plateau_y
     return None, None
 
-"""
-marker = find_plateau(x, y)
-
-# Plot the ROC-like curve
-plt.plot(x, y, label='ROC-like Curve')
-plt.plot(marker[0][0], marker[0][1], marker='o', markersize=5, color='red', label='Marker')
-plt.xlabel('False Positive Rate')
-plt.ylabel('True Positive Rate')
-plt.title('ROC-like Curve')
-plt.legend()
-plt.show()
-"""
-
