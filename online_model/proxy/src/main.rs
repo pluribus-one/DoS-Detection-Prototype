@@ -1,71 +1,51 @@
-pub mod signals;
-pub mod config;
-pub mod cache;
-pub mod utils;
-pub mod blocker;
-pub mod metrics;
+pub mod api;
+pub mod rate_limiter;
 
+use tokio::sync::RwLock;
+use once_cell::sync::Lazy;
+use salvo::prelude::*;
+use salvo::rate_limiter::RemoteIpIssuer;
 
-use salvo::{
-    prelude::*,
-    Listener,
-    logging::Logger,
+use rate_limiter::{
+    MultiSlidingGuard,
+    RateLimiter,
+    QuotaMetrics,
+    Cache
 };
-use config::Config;
-use cache::IpsCache;
-use blocker::Blocker;
+use api::{
+    home,
+    update_metrics
+};
 
 
-fn load_proxy_config(
-    config: &Config
-) -> Service
-{
-    Service::new(
-        Router::new()
-            .path("<**rest>")
-            .hoop(IpsCache::new(60))
-            .hoop(Blocker)
-            .goal(Proxy::default_hyper_client(config.upstream().to_string()))
-    ).hoop(Logger::new())
-}
-
-// fn load_http_config(
-//
-// ) -> Service
-// {
-//     Service::new(
-//         Router::new()
-//             .path("/metrics")
-//             .post(goal)
-//     ).hoop(Logger::new())
-// }
-
-/// Start a HTTP server.
-async fn start_http_server(
-    service: Service
-)
-{
-    let acceptor =
-        TcpListener::new("0.0.0.0:80")
-            .bind()
-            .await;
-
-    let server = Server::new(acceptor);
-    let handle = server.handle();
-
-    tokio::spawn(signals::listen_shutdown_signal(handle));
-
-    server.serve(service).await
-}
+pub static TEST: Lazy<RwLock<Option<QuotaMetrics>>> = Lazy::new(|| { RwLock::new(None) });
 
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt().init();
 
-    let config = Config::load_config();
+    let limiter = 
+        RateLimiter::new(
+            MultiSlidingGuard::new(3),
+            Cache::default(),
+            RemoteIpIssuer,
+        );
 
-    let router = load_proxy_config(&config);
+    let router = 
+        Router::new()
+            .push(
+                Router::new()
+                    .get(home)
+                    .hoop(limiter)
+            )
+            .push(
+                Router::new()
+                    .path("/metrics")
+                    .post(update_metrics)
+            );
 
-    start_http_server(router).await;
-}
+    let acceptor = TcpListener::new("127.0.0.1:5800").bind().await;
+
+    Server::new(acceptor).serve(router).await;
+ }
