@@ -5,160 +5,136 @@ from scipy.interpolate import interp1d
 import numpy as np
 import matplotlib.pyplot as plt
 from utils import shift_right
- 
+
 class CVN(BaseEstimator, ClassifierMixin):
-    def __init__(self, threshold=0.0235):
-        self.threshold = threshold
-        self._num_window = 3
-        self.count = defaultdict(lambda: defaultdict(int))
-        self.Nt = list()
-        self.plateau_coord = []
 
-    def _find_plateau(self, x, y, window, min_length=10):    
-        # Pair the elements from both lists
-        paired_lists = list(zip(x, y)) 
-        # Sort based on the values in the first list
-        sorted_pairs = sorted(paired_lists, key=lambda x: x[0]) 
-        # Unpack the sorted pairs into separate lists
-        x, y = zip(*sorted_pairs)
+    def __init__(self):
+        self._num_windows           = 3
+        self._count                 = defaultdict(lambda: defaultdict(int))
+        self._ip_metrics_for_window = [dict() for _ in range(self._num_windows)]
+        self._n_requests_for_window = [list() for _ in range(self._num_windows)]
+        self._Nts                   = list()
+        self.plateau_coord          = []
 
-        #print(x)
-        #print(y)
+    def _find_plateau(self, window_idx, prob_cumulative):
+        x = self._n_requests_for_window[window_idx]
+        y = [item * 100 for item in prob_cumulative]
+    
+        derivative          = np.diff(y) / np.diff(x)
+        masked_derivative   = np.ma.masked_equal(derivative, 0)
+        #masked_derivative   = np.ma.masked_where(derivative >= 1.0e+2, derivative)
+        min                 = np.min(masked_derivative)
 
-        set_x = []
-        set_y = []
-        avg = 0
-        count = 0
+        #min_coords          = np.unravel_index(np.argmin(masked_derivative), masked_derivative.shape)
 
-        """
-        for index, l in enumerate(x):
-            if l in set_x:
-                count += 1
-                set_y[-1] = (set_y[-1][0] + y[index]) , count
-            elif l not in set_x:
-                count = 1
-                set_x.append(l)
-                set_y.append((y[index], count))
+        print(min)
+        print(x[np.where(derivative == min)[0][0]])
 
-        """
-
-        set_y = [l / c for l, c in set_y]
-        set_y_perc = [item * 100 for item in set_y]
-
-        #f = interp1d(set_x, set_y_perc, kind='linear')
-
-        # Creating new x values for interpolation
-        #set_x_interp = np.linspace(min(set_x), max(set_x), num=len(set_x)*10)
-
-        # Interpolated y values
-        #set_y_interp = f(set_x_interp)
-
-        derivative = np.diff(set_y_perc) / np.diff(set_x)
+        # for i in range(len(derivative)):
+        #     if abs(derivative[i]) < self.threshold:
+        #         if i + min_length < len(derivative) and all(abs(derivative[j]) < self.threshold for j in range(i, i + min_length)):
+        #             self.plateau_coord.clear()
+        #             plateau_x = set_x[i + min_length // 2]
+        #             plateau_y = set_y_perc[i + min_length // 2]
+        #             self.plateau_coord.append(plateau_x)
+        #             self.plateau_coord.append(plateau_y)
         
-        for i in range(len(derivative)):
-            if abs(derivative[i]) < self.threshold:
-                if i + min_length < len(derivative) and all(abs(derivative[j]) < self.threshold for j in range(i, i + min_length)):
-                    self.plateau_coord.clear()
-                    plateau_x = set_x[i + min_length // 2]
-                    plateau_y = set_y_perc[i + min_length // 2]
-                    self.plateau_coord.append(plateau_x)
-                    self.plateau_coord.append(plateau_y)
-
-        #print("Size:", len(self.plateau_coord))
-
-        for i in range(0, len(self.plateau_coord), 2):
-            current_couple = self.plateau_coord[i:i+2]
-            plt.plot(current_couple[0], current_couple[1], marker='o', markersize=5, color='red', label='Plateau')
-
-        plt.plot(set_x, set_y_perc)
+        # for i in range(0, len(self.plateau_coord), 2):
+        #     current_couple = self.plateau_coord[i:i+2]
+        #     plt.plot(current_couple[0], current_couple[1], marker='o', markersize=5, color='red', label='Plateau')
+    
+        plt.plot(x, y)
         plt.grid()
         plt.title("Probability p(n <= N) = fraction of clients generating max N requests")
         plt.xlabel("Numer of requests N")
         plt.ylabel("p(n<=N) %")
+        plt.show()
         plt.savefig("plot.pdf")
-        
-        return (plateau_x, plateau_y)
 
-    def _create_windows(self, X):
+
+    def _compute_windows(self, X):
+        """
+        TODO: Add description
+        """
         for _, row in X.iterrows():
             ip = row['ip']
-            for w in range(1, self._num_window + 1):
-                window = shift_right(row['unix_timestamp'], w)
-                self.count[window][ip] += 1
+            for window_idx in range(1, self._num_windows + 1):
+                window = shift_right(row['unix_timestamp'], window_idx)
+                self._count[window][ip] += 1
 
-    def _count_unique(self):
-        total_ips = [set(), set(), set()]
-        total_ni_s = [set(), set(), set()]
 
-        for window, ips in self.count.items():
-            # Convert (IP, num_req) into a set
-            window_ips = set([(k, v) for k, v in ips.items()])
+    def _aggregate_data(self):
+        """
+        TODO: Add description
+        """
+        def merge_dicts(dict1, dict2):
+            result = dict1.copy()
+            for key, value in dict2.items():
+                if key in result:
+                    result[key] = max(result[key], value)
+                else:
+                    result[key] = value
+                return result
 
-            # Retrieve all unique Ni inside a window
-            Ni_list = list(set(ips.values()))
+        for window, ip_metrics in self._count.items():
+            # Remove Ni duplicated
+            n_requests = list(dict.fromkeys(ip_metrics.values()))
             # TODO: Order is required?
-            Ni_list.sort()
+            n_requests.sort()
 
-            # TODO: Add a way to update already present Ips with the 
-            # maximum value
             match 10 - len(str(window)):
                 case 1: # Window 1
-                    total_ips[0] = total_ips[0].union(window_ips)
-                    total_ni_s[0] = total_ni_s[0].union(Ni_list)
+                    self._ip_metrics_for_window[0] = merge_dicts(self._ip_metrics_for_window[0], ip_metrics)
+                    self._n_requests_for_window[0] = list(set(self._n_requests_for_window[0] + n_requests))
                 case 2: # Window 2
-                    total_ips[1] = total_ips[1].union(window_ips)
-                    total_ni_s[1] = total_ni_s[1].union(Ni_list)
+                    self._ip_metrics_for_window[1] = merge_dicts(self._ip_metrics_for_window[1], ip_metrics)
+                    self._n_requests_for_window[1] = list(set(self._n_requests_for_window[1] + n_requests))
                 case 3: # Window 3
-                    total_ips[2] = total_ips[2].union(window_ips)
-                    total_ni_s[2] = total_ni_s[2].union(Ni_list)
+                    self._ip_metrics_for_window[2] = merge_dicts(self._ip_metrics_for_window[2], ip_metrics)
+                    self._n_requests_for_window[2] = list(set(self._n_requests_for_window[2] + n_requests))
+
+
+    def _calculate_cumulative_probabilities(self):
+        """
+        TODO: Add description
+        """
         
-        return total_ips, total_ni_s
-
-    def _calculate_comulative_probabilities(self, ips, ni_s):
-        pass
-
-    def fit(self, X):
-        # Calcolare le finestre temporali e contare le occorrenze
-        Ni_list_plot = [[], [], []]
-        prob_list_plot = [[], [], []]
-
-        self._create_windows(X)
-
-        # print(self.count)
-
-        total_ips, total_ni_s = self._count_unique()
-
-        prob_cumulative = []
-        
-        for window_idx in range(0, self._num_window):
-            for ni in total_ni_s[window_idx]:
+        for window_idx in range(0, self._num_windows):
+            prob_cumulative = []
+            for ni in self._n_requests_for_window[window_idx]:
+                # Computing: (clients with n <= Ni) / total_sources
                 prob = len(
-                    [item for item in total_ips[window_idx] if item[1] <= ni]
-                ) / len(total_ips[window_idx])
-            
+                    [k for k, v in self._ip_metrics_for_window[window_idx].items() if v <= ni]
+                ) / len(self._ip_metrics_for_window[window_idx])
+
                 prob_cumulative.append(prob)
 
-            print(prob_cumulative)
+            # Computing: 
+            # diffs = [
+            #     (prob_cumulative[i+1] - prob_cumulative[i]) /
+            #     ((self._n_requests_for_window[window_idx])[i+1] - (self._n_requests_for_window[window_idx])[i])
+            #     for i in range(len(self._n_requests_for_window[window_idx])-1)
+            # ]
 
-            diffs = [
-                (prob_cumulative[i+1] - prob_cumulative[i]) / 
-                (total_ni_s[window_idx][i+1] - total_ni_s[window_idx][i]) 
-                for i in range(len(total_ni_s[window_idx])-1)
-            ]
+            # print(self._n_requests_for_window[window_idx][diffs.index(min(diffs))])
 
-            # if not diffs:
-            #     diffs = Ni_list
+            # self._Nts[window_idx] = self._n_requests_for_window[window_idx][diffs.index(min(diffs))]
 
-            #print(window)
+            # Ni_list_plot[window_idx].extend(total_ni_s[window_idx])
+            # prob_list_plot[window_idx].extend(prob_cumulative)
 
-            self.Nt[window_idx] = (total_ni_s[window_idx][diffs.index(min(diffs))])
-            
-            Ni_list_plot[window_idx].extend(total_ni_s[window_idx]) 
-            prob_list_plot[window_idx].extend(prob_cumulative)
-                        
-        for w in range(0, self._num_window):
-            self.plateau_coord.append(self._find_plateau(Ni_list_plot[w], prob_list_plot[w], w))
-    
+            self.plateau_coord.append(self._find_plateau(window_idx, prob_cumulative))
+
+
+    def fit(self, X):
+        """
+        TODO: Add description
+        """
+
+        self._compute_windows(X)
+        self._aggregate_data()
+        self._calculate_cumulative_probabilities()
+
         return self
 
- 
+
