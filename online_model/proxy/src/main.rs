@@ -43,14 +43,14 @@ async fn main() {
 
         let internal_server =
             Server::new(
-                TcpListener::new("0.0.0.0:5800")
+                TcpListener::new("0.0.0.0:8080")
                     .bind()
                     .await
             );
 
         let proxy_server =
             Server::new(
-                TcpListener::new("0.0.0.0:5801")
+                TcpListener::new("0.0.0.0:8081")
                     .bind()
                     .await
             );
