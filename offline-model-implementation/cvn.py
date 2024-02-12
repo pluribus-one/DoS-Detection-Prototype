@@ -28,7 +28,9 @@ class CVN(BaseEstimator, ClassifierMixin):
         #min_coords          = np.unravel_index(np.argmin(masked_derivative), masked_derivative.shape)
 
         print(min)
-        print(x[np.where(derivative == min)[0][0]])
+        i = np.where(derivative == min)[0][0]
+
+        print((x[i], y[i]))
 
         # for i in range(len(derivative)):
         #     if abs(derivative[i]) < self.threshold:
