@@ -1,9 +1,13 @@
+//! A module to handle shutdown signals.
+
 use salvo::server::ServerHandle;
 use tokio::signal;
 
+
 /// Listen shutdown signal.
 pub async fn listen_shutdown_signal(
-    handle: ServerHandle
+    internal_handle: ServerHandle,
+    proxy_handle: ServerHandle
 )
 {
     let ctrl_c = async {
@@ -29,9 +33,10 @@ pub async fn listen_shutdown_signal(
     };
 
     tokio::select! {
-        _ = ctrl_c => println!("ctrl_c signal received"),
-        _ = terminate => println!("terminate signal received"),
+        _ = ctrl_c => println!("CTRL+C signal received"),
+        _ = terminate => println!("SIGTERM received"),
     };
 
-    handle.stop_graceful(None);
+    internal_handle.stop_graceful(None);
+    proxy_handle.stop_graceful(None);
 }

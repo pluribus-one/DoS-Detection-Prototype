@@ -1,5 +1,7 @@
 pub mod api;
 pub mod rate_limiter;
+pub mod signals;
+pub mod config;
 
 use salvo::{
     prelude::*,
@@ -13,45 +15,67 @@ use rate_limiter::{
     Cache
 };
 use api::update_metrics;
+use config::Config;
 
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt().init();
 
-    let limiter =
-        RateLimiter::new(
-            MultiSlidingGuard::new(3),
-            Cache::default(),
-            RemoteIpIssuer,
-        );
-
-    let internal_router =
-        Router::with_path("/metrics")
-            .goal(update_metrics);
-
-    let proxy_router =
-        Router::with_path("/<**rest>")
-            .hoop(limiter)
-            .goal(
-                Proxy::default_hyper_client("https://www.rust-lang.org")
+    if let Some(config) = Config::load_config() {
+        let limiter =
+            RateLimiter::new(
+                MultiSlidingGuard::new(3),
+                Cache::default(),
+                RemoteIpIssuer,
             );
 
+        let internal_router =
+            Router::with_path("/metrics")
+                .goal(update_metrics);
 
-    let internal_acceptor =
-        TcpListener::new("0.0.0.0:5800")
-            .bind();
+        let proxy_router =
+            Router::with_path("/<**rest>")
+                .hoop(limiter)
+                .goal(
+                    Proxy::default_hyper_client(config.upstream().to_string())
+                );
 
-    let proxy_acceptor =
-        TcpListener::new("0.0.0.0:5801")
-            .bind();
+        let internal_server =
+            Server::new(
+                TcpListener::new("0.0.0.0:5800")
+                    .bind()
+                    .await
+            );
 
-    tokio::try_join!(
-        Server::new(internal_acceptor.await)
-            .try_serve(internal_router),
-        Server::new(proxy_acceptor.await)
-            .try_serve(proxy_router),
-    )
-    .unwrap();
- 
+        let proxy_server =
+            Server::new(
+                TcpListener::new("0.0.0.0:5801")
+                    .bind()
+                    .await
+            );
+
+        tokio::spawn(
+            signals::listen_shutdown_signal(
+                internal_server.handle(),
+                proxy_server.handle()
+            )
+        );
+
+        if let Err(reason) = tokio::try_join!(
+            internal_server
+                .try_serve(internal_router),
+            proxy_server
+                .try_serve(proxy_router),
+        )
+        {
+            tracing::error!(
+                error = ?reason,
+                "{}",
+                reason
+            );
+        }
+    } else {
+        tracing::error!("Failed to read configuration file")
+    }
 }

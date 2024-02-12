@@ -100,13 +100,19 @@ impl Handler for RateLimiter
 
         let mut guard =
             match self.store.load_guard(&key, &self.guard).await {
-                Ok(guard) => guard,
-                Err(e) => {
-                    tracing::error!(error = ?e, "RateLimiter: {}", e);
+                Ok(guard)   => guard,
+                Err(reason) => {
+                    tracing::error!(
+                        error = ?reason,
+                        "RateLimiter: {}",
+                        reason
+                    );
+
                     res.status_code(
                         StatusCode::INTERNAL_SERVER_ERROR
                     );
                     ctrl.skip_rest();
+
                     return;
                 }
             };
@@ -119,11 +125,16 @@ impl Handler for RateLimiter
                 ctrl.skip_rest();
             }
 
-            if let Err(e) = self.store.save_guard(key, guard).await {
-                tracing::error!(error = ?e, "RateLimiter: Failed to save guard");
+            if let Err(reason) = self.store.save_guard(key, guard).await {
+                tracing::error!(
+                    error = ?reason,
+                    "RateLimiter: Failed to save guard"
+                );
             }
         } else {
-            tracing::error!("RateLimiter: Failed to retrive system metrics")
+            tracing::error!(
+                "RateLimiter: Failed to retrive system metrics"
+            )
         }
     }
 }

@@ -17,12 +17,11 @@ pub struct Config {
 
 impl Config {
     /// Load configuration from TOML file.
-    pub fn load_config() -> Self
+    pub fn load_config() -> Option<Self>
     {
         std::fs::read_to_string("./settings.toml")
             .ok()
             .and_then(|content| toml::from_str(&content).ok())
-            .unwrap()
     }
 
     /// Return `tls` value.
