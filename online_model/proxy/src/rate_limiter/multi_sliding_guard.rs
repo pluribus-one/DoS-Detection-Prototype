@@ -9,7 +9,10 @@ use salvo::rate_limiter::CelledQuota;
 
 /// A data model defining a fac-simile `SlidingGuard` with
 /// multiples quotas.
-#[derive(Clone, Debug)]
+#[derive(
+    Clone,
+    Debug
+)]
 pub struct MultiSlidingGuard {
     cell_inst   : Vec<OffsetDateTime>,
     cell_span   : Vec<Duration>,
@@ -25,7 +28,8 @@ impl Default for MultiSlidingGuard {
 }
 
 impl MultiSlidingGuard {
-    /// Create a new `MultiSlidingGuard`.
+    /// Create a new `MultiSlidingGuard` with a specific `size`
+    /// (number of metrics).
     pub fn new(
         size: usize
     ) -> Self
@@ -38,7 +42,7 @@ impl MultiSlidingGuard {
             quota       : vec![None; size],
         }
     }
-    
+
     /// Check whether a client has exceeded the allowed number of requests,
     /// in other words, it tries to detect DoS/Bot attacks.
     pub async fn verify(
@@ -62,6 +66,7 @@ impl MultiSlidingGuard {
     {
         if self.quota[idx].is_none() || self.quota[idx].as_ref() != Some(quota) {
             let mut quota = quota.clone();
+
             if quota.limit == 0 {
                 quota.limit = 1;
             }
@@ -71,12 +76,14 @@ impl MultiSlidingGuard {
             if quota.cells > quota.limit {
                 quota.cells = quota.limit;
             }
+
             self.cell_inst[idx] = OffsetDateTime::now_utc();
             self.cell_span[idx] = quota.period / (quota.cells as u32);
             self.counts[idx]    = vec![0; quota.cells];
             self.head[idx]      = 0;
             self.counts[idx][0] = 1;
             self.quota[idx]     = Some(quota);
+
             return true;
         }
 
@@ -87,15 +94,16 @@ impl MultiSlidingGuard {
             self.head[idx]      = 0;
             self.counts[idx][0] = 1;
             self.cell_inst[idx] = OffsetDateTime::now_utc();
+
             return true;
         } else {
             while delta > self.cell_span[idx] {
-                delta -= self.cell_span[idx];
-                self.head[idx] = (self.head[idx] + 1) % self.counts[idx].len();
+                delta           -= self.cell_span[idx];
+                self.head[idx]  = (self.head[idx] + 1) % self.counts[idx].len();
                 self.counts[idx][self.head[idx]] = 0;
             }
 
-            self.head[idx] = (self.head[idx] + 1) % self.counts[idx].len();
+            self.head[idx]      = (self.head[idx] + 1) % self.counts[idx].len();
             self.counts[idx][self.head[idx]] += 1;
             self.cell_inst[idx] = OffsetDateTime::now_utc();
         }

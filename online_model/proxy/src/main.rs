@@ -1,51 +1,57 @@
 pub mod api;
 pub mod rate_limiter;
 
-use tokio::sync::RwLock;
-use once_cell::sync::Lazy;
-use salvo::prelude::*;
-use salvo::rate_limiter::RemoteIpIssuer;
+use salvo::{
+    prelude::*,
+    rate_limiter::RemoteIpIssuer,
+    proxy::Proxy
+};
 
 use rate_limiter::{
     MultiSlidingGuard,
     RateLimiter,
-    QuotaMetrics,
     Cache
 };
-use api::{
-    home,
-    update_metrics
-};
-
-
-pub static TEST: Lazy<RwLock<Option<QuotaMetrics>>> = Lazy::new(|| { RwLock::new(None) });
+use api::update_metrics;
 
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt().init();
 
-    let limiter = 
+    let limiter =
         RateLimiter::new(
             MultiSlidingGuard::new(3),
             Cache::default(),
             RemoteIpIssuer,
         );
 
-    let router = 
-        Router::new()
-            .push(
-                Router::new()
-                    .get(home)
-                    .hoop(limiter)
-            )
-            .push(
-                Router::new()
-                    .path("/metrics")
-                    .post(update_metrics)
+    let internal_router =
+        Router::with_path("/metrics")
+            .goal(update_metrics);
+
+    let proxy_router =
+        Router::with_path("/<**rest>")
+            .hoop(limiter)
+            .goal(
+                Proxy::default_hyper_client("https://www.rust-lang.org")
             );
 
-    let acceptor = TcpListener::new("127.0.0.1:5800").bind().await;
 
-    Server::new(acceptor).serve(router).await;
- }
+    let internal_acceptor =
+        TcpListener::new("0.0.0.0:5800")
+            .bind();
+
+    let proxy_acceptor =
+        TcpListener::new("0.0.0.0:5801")
+            .bind();
+
+    tokio::try_join!(
+        Server::new(internal_acceptor.await)
+            .try_serve(internal_router),
+        Server::new(proxy_acceptor.await)
+            .try_serve(proxy_router),
+    )
+    .unwrap();
+ 
+}

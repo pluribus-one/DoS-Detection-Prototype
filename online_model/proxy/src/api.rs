@@ -1,24 +1,18 @@
-//! API
+//! A module defining available APIs on the system.
 
-use salvo::prelude::*;
+use salvo::{
+    hyper::Method,
+    prelude::*
+};
 
 use super::rate_limiter::{
     Metrics,
+    SYSTEM_METRICS,
     QuotaMetrics
 };
-use super::TEST;
 
 
-///
-#[handler]
-pub async fn home(
-    res: &mut Response
-)
-{
-    res.render(Text::Plain("Test Rate Limit"))
-}
-
-///
+/// Definition of POST `/metrics` API.
 #[handler]
 pub async fn update_metrics(
     &self,
@@ -26,19 +20,27 @@ pub async fn update_metrics(
     res: &mut Response,
 )
 {
-    if let Ok(new_metrics) = req.parse_json::<Metrics>().await {
-        let mut metrics = TEST.write().await;
+    if req.method() == Method::POST {
+        if let Ok(new_metrics) = req.parse_json::<Metrics>().await {
+            let mut metrics = SYSTEM_METRICS.write().await;
 
-        if let Some(metrics) = metrics.as_mut() {
-            metrics.update_metrics(new_metrics);
+            if let Some(metrics) = metrics.as_mut() {
+                metrics.update_metrics(new_metrics);
+            } else {
+                *metrics = Some(QuotaMetrics::new(new_metrics))
+            }
+
+            res.render(
+                Text::Json(r#"{"status": "Updated"}"#)
+            );
         } else {
-            *metrics = Some(QuotaMetrics::new(new_metrics))
+            res.render(
+                Text::Json(r#"{"status":"Invalid metrics"}"#)
+            );
         }
-
-        dbg!(&metrics);
-
-        res.render(Text::Json(r#"{"status": "Updated"}"#));
     } else {
-        res.render(Text::Json(r#"{"status":"Invalid metrics"}"#));
+        res.render(
+            StatusError::method_not_allowed()
+        )
     }
 }

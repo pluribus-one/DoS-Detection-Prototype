@@ -1,11 +1,26 @@
-//! 
+//! A module defining the metrics of `RateLimiter` mechanism.
 
 use salvo::{
     prelude::*,
     rate_limiter::CelledQuota
 };
-use std::marker::Send;
+use tokio::sync::RwLock;
+use once_cell::sync::Lazy;
 use serde::Deserialize;
+
+
+/// A set of constants defining the last in seconds of 
+/// each available window.
+const FIRST_WINDOW_LAST: i64  = 10;
+const SECOND_WINDOW_LAST: i64 = 100;
+const THIRD_WINDOW_LAST: i64  = 1000;
+
+/// A data structure in charge of globally mantaining
+/// the current values of metrics. This is behind a `RwLock` but
+/// should not be heavy since only one component, it is able to
+/// update them.
+pub static SYSTEM_METRICS: Lazy<RwLock<Option<QuotaMetrics>>> =
+    Lazy::new(|| { RwLock::new(None) });
 
 
 /// A structure defined to map the `/metrics` API body.
@@ -18,30 +33,43 @@ pub struct Metrics {
 }
 
 impl Metrics {
-    pub fn count_first_window(&self) -> usize
+    /// Return the value of the first window.
+    pub fn count_first_window(
+        &self
+    ) -> usize
     {
         self.count_first_window
     }
 
-    pub fn count_second_window(&self) -> usize
+    /// Return the value of the second window.
+    pub fn count_second_window(
+        &self
+    ) -> usize
     {
         self.count_second_window
     }
 
-    pub fn count_third_window(&self) -> usize
+    /// Return the value of the third window.
+    pub fn count_third_window(
+        &self
+    ) -> usize
     {
         self.count_third_window
     }
 }
 
-///
+
+/// A data structure modelling the metrics' shape within
+/// the `Cache`. It is assigned to each IP address
+/// (client) and it is in charge to keeping real time
+/// counts for each client.
 #[derive(Debug)]
 pub struct QuotaMetrics {
     quotas: [CelledQuota; 3]
 }
 
 impl QuotaMetrics {
-    ///
+    /// Create a new `QuotaMetrics` consuming a `Metrics`.
     pub fn new(
         metrics: Metrics
     ) -> Self
@@ -49,19 +77,25 @@ impl QuotaMetrics {
         Self {
             quotas: [
                 CelledQuota::set_seconds(
-                    metrics.count_first_window(), 1, 10
+                    metrics.count_first_window(),
+                    1,
+                    FIRST_WINDOW_LAST
                 ),
                 CelledQuota::set_seconds(
-                    metrics.count_second_window(), 1, 100
+                    metrics.count_second_window(),
+                    1,
+                    SECOND_WINDOW_LAST
                 ),
                 CelledQuota::set_seconds(
-                    metrics.count_third_window(), 1, 1000
+                    metrics.count_third_window(),
+                    1,
+                    THIRD_WINDOW_LAST
                 )
             ]
         }
     }
 
-    ///
+    /// Update the limits inside a `QuotaMetrics` consuming a `Metrics`.
     pub fn update_metrics(
         &mut self,
         metrics: Metrics
@@ -80,7 +114,7 @@ impl QuotaMetrics {
         }
     }
 
-    ///
+    /// Return a reference to the current `CelledQuota`.
     pub fn get_metrics(
         &self
     ) -> &[CelledQuota; 3]
@@ -88,4 +122,3 @@ impl QuotaMetrics {
         &self.quotas
     }
 }
-

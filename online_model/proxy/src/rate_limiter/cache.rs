@@ -7,6 +7,7 @@ use std::{
 use moka::future::Cache as MokaCache;
 use super::multi_sliding_guard::MultiSlidingGuard;
 
+
 /// Default cache parameters.
 const DEFAULT_SIZE: u64 = 3000;
 const DEFAULT_TTI : u64 = 60;
@@ -29,8 +30,7 @@ impl<'a> Default for Cache
     }
 }
 
-impl Cache
-{
+impl Cache {
     /// Create a new `Cache`.
     pub fn new(
         capacity: u64,
