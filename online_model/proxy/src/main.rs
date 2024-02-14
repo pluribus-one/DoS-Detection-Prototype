@@ -6,7 +6,8 @@ pub mod config;
 use salvo::{
     prelude::*,
     rate_limiter::RemoteIpIssuer,
-    proxy::Proxy
+    proxy::Proxy,
+    logging::Logger
 };
 
 use rate_limiter::{
@@ -31,15 +32,19 @@ async fn main() {
             );
 
         let internal_router =
-            Router::with_path("/metrics")
-                .goal(update_metrics);
+            Service::new(
+                Router::with_path("/metrics")
+                    .goal(update_metrics)
+            ).hoop(Logger::new());
 
         let proxy_router =
-            Router::with_path("/<**rest>")
-                .hoop(limiter)
-                .goal(
-                    Proxy::default_hyper_client(config.upstream().to_string())
-                );
+            Service::new(
+                Router::with_path("/<**rest>")
+                    .hoop(limiter)
+                    .goal(
+                        Proxy::default_hyper_client(config.upstream().to_string())
+                    )
+                ).hoop(Logger::new());
 
         let internal_server =
             Server::new(

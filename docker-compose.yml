@@ -3,7 +3,23 @@ version: "3"
 services:
   demo-ecommerce:
     image: bkimminich/juice-shop
-    ports:
-      - 9080:3000
+    container_name: demo-ecommerce
+    # ports:
+    #  - 3000
+    restart: unless-stopped
+    networks:
+      internal-nw:
 
-  proxy:
+  firewall:
+    build: ./online_model/
+    container_name: firewall
+    ports:
+      - 0.0.0.0:8080:8081
+    restart: unless-stopped
+    volumes:
+      - ./online_model/settings.toml:/settings.toml
+    networks:
+      internal-nw:
+
+networks:
+  internal-nw:
