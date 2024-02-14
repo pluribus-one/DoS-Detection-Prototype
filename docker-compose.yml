@@ -4,20 +4,31 @@ services:
   demo-ecommerce:
     image: bkimminich/juice-shop
     container_name: demo-ecommerce
-    # ports:
-    #  - 3000
     restart: unless-stopped
     networks:
       internal-nw:
 
   firewall:
-    build: ./online_model/
+    build:
+      context: .
+      dockerfile: ./online_model/proxy.Dockerfile
     container_name: firewall
     ports:
       - 0.0.0.0:8080:8081
     restart: unless-stopped
     volumes:
-      - ./online_model/settings.toml:/settings.toml
+      - ./online_model/config/proxy.settings.toml:/settings.toml
+    networks:
+      internal-nw:
+
+  firewall-interface:
+    build:
+      context: .
+      dockerfile: ./online_model/interface.Dockerfile
+    container_name: firewall-interface
+    ports:
+      - 0.0.0.0:5000:5000
+    restart: unless-stopped
     networks:
       internal-nw:
 

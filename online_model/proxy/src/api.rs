@@ -30,10 +30,12 @@ pub async fn update_metrics(
                 *metrics = Some(QuotaMetrics::new(new_metrics))
             }
 
+            res.status_code(StatusCode::OK);
             res.render(
                 Text::Json(r#"{"status": "Updated"}"#)
             );
         } else {
+            res.status_code(StatusCode::BAD_REQUEST);
             res.render(
                 Text::Json(r#"{"status":"Invalid metrics"}"#)
             );
