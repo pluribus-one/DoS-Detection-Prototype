@@ -1,37 +1,39 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Form con Flask</title>
-  </head>
 
-  <body>
-    <h2>Form per l'invio di dati in JSON a Flask</h2>
-    <form method="post">
-      {{ form.hidden_tag() }}
-      <div>
-        {{ form.window1.label }}<br />
-        {{ form.window1 }}<br />
-        {% for error in form.window1.errors %}
-        <span style="color: red">{{ error }}</span><br />
-        {% endfor %}
-      </div>
-      <div>
-        {{ form.window2.label }}<br />
-        {{ form.window2 }}<br />
-        {% for error in form.window2.errors %}
-        <span style="color: red">{{ error }}</span><br />
-        {% endfor %}
-      </div>
-      <div>
-        {{ form.window3.label }}<br />
-        {{ form.window3 }}<br />
-        {% for error in form.window3.errors %}
-        <span style="color: red">{{ error }}</span><br />
-        {% endfor %}
-      </div>
-      <div>{{ form.submit() }}</div>
-    </form>
-  </body>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Form con Flask</title>
+</head>
+
+<body>
+  <h2>Detection System Interface</h2>
+  <form method="post">
+    {{ form.hidden_tag() }}
+    <div>
+      {{ form.window1.label }}<br />
+      {{ form.window1 }}<br />
+      {% for error in form.window1.errors %}
+      <span style="color: red">{{ error }}</span><br />
+      {% endfor %}
+    </div>
+    <div>
+      {{ form.window2.label }}<br />
+      {{ form.window2 }}<br />
+      {% for error in form.window2.errors %}
+      <span style="color: red">{{ error }}</span><br />
+      {% endfor %}
+    </div>
+    <div>
+      {{ form.window3.label }}<br />
+      {{ form.window3 }}<br />
+      {% for error in form.window3.errors %}
+      <span style="color: red">{{ error }}</span><br />
+      {% endfor %}
+    </div>
+    <div>{{ form.submit() }}</div>
+  </form>
+</body>
+
 </html>
