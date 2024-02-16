@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Training Interface</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f2f2f2;
+    }
+
+    .container {
+      text-align: center;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    button {
+      background-color: #3498db;
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+    }
+
+    .loader {
+      border: 16px solid #f3f3f3;
+      /* Light grey */
+      border-top: 16px solid #3498db;
+      /* Blue */
+      border-radius: 50%;
+      width: 120px;
+      height: 120px;
+      animation: spin 2s linear infinite;
+      display: none;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Training model Interface</h1>
+    <button onclick="analyze()">Start training</button>
+    <div id="loader" class="loader"></div>
+    <div id="result"></div>
+  </div>
+
+  <script>
+    let metrics = null;
+
+    function analyze() {
+      document.getElementById("loader").style.display = "block";
+      fetch("/training")
+        .then((response) => response.json())
+        .then((data) => {
+          document.getElementById("loader").style.display = "none";
+          metrics = data;
+          document.getElementById("result").innerHTML = `
+                    <p>Window 1: ${data.count_first_window}</p>
+                    <p>Window 2: ${data.count_second_window}</p>
+                    <p>Window 3: ${data.count_third_window}</p>
+                    <button onclick="sendJson()">Send Metrics</button>
+                `;
+        });
+    }
+
+    function sendJson() {
+      fetch("/send_metrics", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(metrics),
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          alert(data.message);
+        });
+    }
+  </script>
+</body>
+
+</html>

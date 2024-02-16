@@ -10,10 +10,10 @@ RUN pip install --user pipenv
 
 ENV PATH="/home/.local/bin:${PATH}"
 
-RUN pip install --user flask Flask-WTF WTForms requests
+RUN pip install --user flask requests numpy matplotlib scikit-learn pandas
 
-COPY --chown=worker:worker ./online_model/interface/ .
+COPY --chown=worker:worker ./model-implementation/model/ .
 
 EXPOSE 5000
 
-CMD ["python", "/app/server.py"]
+CMD ["python", "/app/app.py"]

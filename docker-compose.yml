@@ -11,24 +11,37 @@ services:
   firewall:
     build:
       context: .
-      dockerfile: ./online_model/proxy.Dockerfile
+      dockerfile: ./online-component/proxy.Dockerfile
     container_name: firewall
     ports:
       - 0.0.0.0:8080:8081
     restart: unless-stopped
     volumes:
-      - ./online_model/config/proxy.settings.toml:/settings.toml
+      - ./online-component/config/proxy.settings.toml:/settings.toml
     networks:
       internal-nw:
 
   firewall-interface:
     build:
       context: .
-      dockerfile: ./online_model/interface.Dockerfile
+      dockerfile: ./online-component/interface.Dockerfile
     container_name: firewall-interface
     ports:
       - 0.0.0.0:5000:5000
     restart: unless-stopped
+    networks:
+      internal-nw:
+
+  offline-model:
+    build:
+      context: .
+      dockerfile: ./model-implementation/model.Dockerfile
+    container_name: ml-model
+    ports:
+      - 0.0.0.0:5001:5000
+    restart: unless-stopped
+    volumes:
+      - ./model-implementation/model/features.csv:/features.csv
     networks:
       internal-nw:
 
