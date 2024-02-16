@@ -13,7 +13,7 @@ ENV RUSTFLAGS "-C link-arg=-s"
 
 WORKDIR /tmp
 
-COPY ./online_model/proxy/ /tmp/
+COPY ./online-component/proxy/ /tmp/
 
 RUN echo "Building proxy from source" && \
   cargo build --release --target $(cat /arch)-unknown-linux-gnu ${CARGO_FEATURES} && \

@@ -13,9 +13,12 @@ class CVN(BaseEstimator, ClassifierMixin):
         self._ip_metrics_for_window = [dict() for _ in range(self._num_windows)]
         self._n_requests_for_window = [list() for _ in range(self._num_windows)]
         self._Nts                   = list()
-        self.plateau_coord          = []
+        self._metrics               = []
 
-    def _find_plateau(self, window_idx, prob_cumulative):
+    def _compute_threasholds(self, window_idx, prob_cumulative):
+        """
+        Compute final metrics.
+        """
         x = self._n_requests_for_window[window_idx]
         y = [item * 100 for item in prob_cumulative]
 
@@ -24,8 +27,9 @@ class CVN(BaseEstimator, ClassifierMixin):
         min                 = np.min(masked_derivative)
         min_idx             = np.where(derivative == min)[0][0]
 
-        self.plateau_coord.append((x[min_idx], y[min_idx]))
+        self._metrics.append(x[min_idx])
 
+        # Ploting metric
         plt.plot(x, y)
         plt.plot(x[min_idx], y[min_idx], marker='o', markersize=5, color='red', label='Plateau')
         plt.grid()
@@ -38,14 +42,13 @@ class CVN(BaseEstimator, ClassifierMixin):
                 f"plots/plot_{window_idx}.pdf"
             )
         )
-        plt.show()
 
     def _compute_windows(self, X):
         """
         Compute the windows performing a right shift on the unix timestamp.
 
         Parameters:
-        ----------- 
+        -----------
         X : Dataset of requests made up of timestamp, ip address and unix timestamp.
         """
         for _, row in X.iterrows():
@@ -56,7 +59,7 @@ class CVN(BaseEstimator, ClassifierMixin):
 
     def _aggregate_data(self):
         """
-        TODO: Add description
+        Aggregate data from `_compute_windows` function.
         """
         def merge_dicts(dict1, dict2):
             result = dict1.copy()
@@ -91,7 +94,7 @@ class CVN(BaseEstimator, ClassifierMixin):
 
     def _calculate_cumulative_probabilities(self):
         """
-        TODO: Add description
+        Calculate cumulative probability for each defined window.
         """
 
         for window_idx in range(0, self._num_windows):
@@ -104,7 +107,7 @@ class CVN(BaseEstimator, ClassifierMixin):
 
                 prob_cumulative.append(prob)
 
-            self._find_plateau(window_idx, prob_cumulative)
+            self._compute_threasholds(window_idx, prob_cumulative)
 
     def fit(self, X):
         """
@@ -124,3 +127,10 @@ class CVN(BaseEstimator, ClassifierMixin):
         self._calculate_cumulative_probabilities()
 
         return self
+
+    def get_metrics(self):
+        """
+        Return computed metrics.
+        """
+        return self._metrics
+

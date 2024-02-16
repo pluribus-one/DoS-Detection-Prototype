@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request, jsonify
-import random
-import json
+import requests
 from cvn import CVN
 import pandas as pd
 from utils import to_unix_timestamp
@@ -11,19 +10,19 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 
 
 def training_model():
-    # print('[+] Reading features...')
-    #
-    # df = pd.read_csv('features.csv')
-    # df['unix_timestamp'] = df['timestamp'].apply(to_unix_timestamp)
-    #
-    # print("[+] Starting training...")
-    #
-    # clf = CVN()
-    # clf.fit(df)
-    #
-    # print("[+] Finished training.")
+    print('[+] Reading features...')
 
-    return 0, 1, 2
+    df = pd.read_csv('features.csv', nrows=10_000_000)
+    df['unix_timestamp'] = df['timestamp'].apply(to_unix_timestamp)
+
+    print("[+] Starting training...")
+
+    clf = CVN()
+    clf.fit(df)
+
+    print("[+] Finished training.")
+
+    return clf.get_metrics()
 
 @app.route('/')
 def index():
@@ -44,13 +43,16 @@ def send_json():
 
     print(data)
 
-    # endpoint_url = 'http://example.com/api/endpoint'
-    #
-    # response = requests.post(endpoint_url, json=data)
+    endpoint_url = 'http://firewall:8080/metrics'
 
-    return jsonify({'message': 'Dati inviati con successo'})
+    response = requests.post(endpoint_url, json=data)
+
+    if response.status_code == 200:
+        return jsonify({'message': 'Data succesfully inserted'})
+    else:
+        return jsonify({'message': 'Somethings went wrong'})
 
 
 if __name__ == '__main__':
-    app.run("0.0.0.0", port=5000, debug=True)
+    app.run("0.0.0.0", port=5000)
 
