@@ -6,12 +6,18 @@ This repository contains the definition of a simulated infrastructure consisting
 The dataset used to train the model is the following: https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/3QBYB5
 
 ## How to run
-For all components of the system, a Docker image has been created and they were then configured in a single Docker Compose.
-Therefore, to bring up the infrastructure, it is enough to execute the following command:
+For all components of the system, a Docker image has been created and they were then configured in a single Docker compose.
+Therefore, to bring up the infrastructure, it is enough to execute the following commands:
 
-` ` ` bash
+1. Clone this repository:
+```bash
+git clone https://github.com/christianscano/network_sec_project.git
+```
+2. Run Docker compose:
+
+``` bash
 docker compose up 
-` ` `
+```
 
 The infrastructure exposes the following ports:
 * 8080: the e-commerce site.
