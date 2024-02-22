@@ -20,9 +20,9 @@ docker compose up
 ```
 
 The infrastructure exposes the following ports:
-* 8080: the e-commerce site.
-* 5000: an interface for internal use to interact directly with the reverse proxy.
-* 5001: an interface to interact with the Machine Learning model (to perform training and send new metrics to the reverse proxy).
+* `8080`: the e-commerce site.
+* `5000`: an interface for internal use to interact directly with the reverse proxy.
+* `5001`: an interface to interact with the Machine Learning model (to perform training and send new metrics to the reverse proxy).
 
 
 
