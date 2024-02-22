@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from utils import shift_right
 import os
+import datetime
 
 
 class CVN(BaseEstimator, ClassifierMixin):
@@ -30,12 +31,14 @@ class CVN(BaseEstimator, ClassifierMixin):
         self._metrics.append(x[min_idx])
 
         # Ploting metric
-        plt.plot(x, y)
-        plt.plot(x[min_idx], y[min_idx], marker='o', markersize=5, color='red', label='Plateau')
+        print(window_idx+1)
+        plt.plot(x, y, label=f'window {str(datetime.timedelta(seconds=10**(window_idx+1)))} - threshold = {x[min_idx]}')
+        plt.plot(x[min_idx], y[min_idx], marker='o', markersize=4, color='red')
         plt.grid()
         plt.title("Probability p(n <= N) = fraction of clients generating max N requests")
         plt.xlabel("Number of requests N")
         plt.ylabel("p(n<=N) %")
+        plt.legend(loc="lower right")
         plt.savefig(
             os.path.join(
                 os.path.abspath("."),

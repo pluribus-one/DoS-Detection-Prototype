@@ -5,7 +5,7 @@ use std::{
     time::Duration
 };
 use moka::future::Cache as MokaCache;
-use super::multi_sliding_guard::MultiSlidingGuard;
+use super::multi_guard::MultiGuard;
 
 
 /// Default cache parameters.
@@ -16,10 +16,10 @@ const DEFAULT_TTI : u64 = 60;
 /// A data model defining a concurrent and lock free Cache.
 #[derive(Debug)]
 pub struct Cache {
-    inner: MokaCache<String, MultiSlidingGuard>,
+    inner: MokaCache<String, MultiGuard>,
 }
 
-impl<'a> Default for Cache
+impl Default for Cache
 {
     fn default() -> Self
     {
@@ -50,8 +50,8 @@ impl Cache {
     pub async fn load_guard(
         &self,
         key     : &str,
-        refer   : &MultiSlidingGuard
-    ) -> Result<MultiSlidingGuard, Infallible>
+        refer   : &MultiGuard
+    ) -> Result<MultiGuard, Infallible>
     {
         let guard = self.inner.get(key).await;
         if let Some(guard) = guard {
@@ -65,7 +65,7 @@ impl Cache {
     pub async fn save_guard(
         &self,
         key     : String,
-        guard   : MultiSlidingGuard
+        guard   : MultiGuard
     ) -> Result<(), Infallible>
     {
         self.inner.insert(key, guard).await;
