@@ -2,14 +2,14 @@
 
 use salvo::{
     prelude::*,
-    rate_limiter::CelledQuota
+    rate_limiter::BasicQuota
 };
 use tokio::sync::RwLock;
 use once_cell::sync::Lazy;
 use serde::Deserialize;
 
 
-/// A set of constants defining the last in seconds of 
+/// A set of constants defining the last in seconds of
 /// each available window.
 const FIRST_WINDOW_LAST: i64  = 10;
 const SECOND_WINDOW_LAST: i64 = 100;
@@ -24,8 +24,17 @@ pub static SYSTEM_METRICS: Lazy<RwLock<Option<QuotaMetrics>>> =
 
 
 /// A structure defined to map the `/metrics` API body.
-#[derive(Deserialize, Extractible, Debug)]
-#[salvo(extract(default_source(from = "body", parse = "json")))]
+#[derive(
+    Deserialize,
+    Extractible,
+    Debug
+)]
+#[salvo(extract(
+    default_source(
+        from = "body",
+        parse = "json"
+    )
+))]
 pub struct Metrics {
     pub count_first_window  : usize,
     pub count_second_window : usize,
@@ -65,7 +74,7 @@ impl Metrics {
 /// counts for each client.
 #[derive(Debug)]
 pub struct QuotaMetrics {
-    quotas: [CelledQuota; 3]
+    quotas: [BasicQuota; 3]
 }
 
 impl QuotaMetrics {
@@ -76,19 +85,16 @@ impl QuotaMetrics {
     {
         Self {
             quotas: [
-                CelledQuota::set_seconds(
+                BasicQuota::set_seconds(
                     metrics.count_first_window(),
-                    1,
                     FIRST_WINDOW_LAST
                 ),
-                CelledQuota::set_seconds(
+                BasicQuota::set_seconds(
                     metrics.count_second_window(),
-                    1,
                     SECOND_WINDOW_LAST
                 ),
-                CelledQuota::set_seconds(
+                BasicQuota::set_seconds(
                     metrics.count_third_window(),
-                    1,
                     THIRD_WINDOW_LAST
                 )
             ]
@@ -114,10 +120,10 @@ impl QuotaMetrics {
         }
     }
 
-    /// Return a reference to the current `CelledQuota`.
+    /// Return a reference to the current `BasicQuota`.
     pub fn get_metrics(
         &self
-    ) -> &[CelledQuota; 3]
+    ) -> &[BasicQuota; 3]
     {
         &self.quotas
     }

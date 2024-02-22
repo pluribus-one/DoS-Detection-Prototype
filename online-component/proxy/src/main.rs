@@ -11,7 +11,7 @@ use salvo::{
 };
 
 use rate_limiter::{
-    MultiSlidingGuard,
+    MultiGuard,
     RateLimiter,
     Cache
 };
@@ -26,7 +26,7 @@ async fn main() {
     if let Some(config) = Config::load_config() {
         let limiter =
             RateLimiter::new(
-                MultiSlidingGuard::new(3),
+                MultiGuard::new(3),
                 Cache::default(),
                 RemoteIpIssuer,
             );

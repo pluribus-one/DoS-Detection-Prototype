@@ -1,10 +1,10 @@
 //! A module defining the `ReteLimiter` component.
 
-pub mod multi_sliding_guard;
+pub mod multi_guard;
 pub mod metrics;
 pub mod cache;
 
-pub use multi_sliding_guard::MultiSlidingGuard;
+pub use multi_guard::MultiGuard;
 pub use metrics::{
     QuotaMetrics,
     Metrics,
@@ -28,7 +28,7 @@ use salvo::{
 /// A structure modelling a rate limiter to defend against
 /// Bot and Dos attacks.
 pub struct RateLimiter {
-    guard       : MultiSlidingGuard,
+    guard       : MultiGuard,
     store       : Cache,
     issuer      : RemoteIpIssuer,
     skipper     : Box<dyn Skipper>,
@@ -37,7 +37,7 @@ pub struct RateLimiter {
 impl RateLimiter {
     /// Create a new `RateLimiter`
     pub fn new(
-        guard       : MultiSlidingGuard,
+        guard       : MultiGuard,
         store       : Cache,
         issuer      : RemoteIpIssuer,
     ) -> Self
