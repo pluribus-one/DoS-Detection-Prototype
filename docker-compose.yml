@@ -41,7 +41,7 @@ services:
       - 0.0.0.0:5001:5000
     restart: unless-stopped
     volumes:
-      - ./features//features.csv:/features.csv
+      - ./model-implementation/features/features.csv:/app/features.csv
     networks:
       internal-nw:
 

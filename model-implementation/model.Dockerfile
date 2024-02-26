@@ -16,4 +16,4 @@ COPY --chown=worker:worker ./model-implementation/model/ .
 
 EXPOSE 5000
 
-CMD ["python", "/app/app.py"]
+CMD ["python", "app.py"]

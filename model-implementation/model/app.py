@@ -41,8 +41,6 @@ def analyze():
 def send_json():
     data = request.get_json()
 
-    print(data)
-
     endpoint_url = 'http://firewall:8080/metrics'
 
     response = requests.post(endpoint_url, json=data)
