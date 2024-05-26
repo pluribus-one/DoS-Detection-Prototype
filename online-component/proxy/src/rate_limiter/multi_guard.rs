@@ -1,9 +1,6 @@
 //! A module defining a `SlidingGuard` with multiples quotas.
 
-use time::{
-    Duration,
-    OffsetDateTime
-};
+use time::OffsetDateTime;
 use salvo::rate_limiter::BasicQuota;
 
 

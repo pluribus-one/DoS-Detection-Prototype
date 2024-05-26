@@ -9,11 +9,11 @@ use once_cell::sync::Lazy;
 use serde::Deserialize;
 
 
-/// A set of constants defining the last in seconds of
-/// each available window.
+/// A set of constants defining the last in seconds of each available window.
+const N_WINDOWS: usize        = 2;
 const FIRST_WINDOW_LAST: i64  = 10;
 const SECOND_WINDOW_LAST: i64 = 100;
-const THIRD_WINDOW_LAST: i64  = 1000;
+// const THIRD_WINDOW_LAST: i64  = 1000;
 
 /// A data structure in charge of globally mantaining
 /// the current values of metrics. This is behind a `RwLock` but
@@ -31,14 +31,13 @@ pub static SYSTEM_METRICS: Lazy<RwLock<Option<QuotaMetrics>>> =
 )]
 #[salvo(extract(
     default_source(
-        from = "body",
+        from  = "body",
         parse = "json"
     )
 ))]
 pub struct Metrics {
     pub count_first_window  : usize,
     pub count_second_window : usize,
-    pub count_third_window  : usize,
 }
 
 impl Metrics {
@@ -57,14 +56,6 @@ impl Metrics {
     {
         self.count_second_window
     }
-
-    /// Return the value of the third window.
-    pub fn count_third_window(
-        &self
-    ) -> usize
-    {
-        self.count_third_window
-    }
 }
 
 
@@ -74,7 +65,7 @@ impl Metrics {
 /// counts for each client.
 #[derive(Debug)]
 pub struct QuotaMetrics {
-    quotas: [BasicQuota; 3]
+    quotas: [BasicQuota; N_WINDOWS]
 }
 
 impl QuotaMetrics {
@@ -92,10 +83,6 @@ impl QuotaMetrics {
                 BasicQuota::set_seconds(
                     metrics.count_second_window(),
                     SECOND_WINDOW_LAST
-                ),
-                BasicQuota::set_seconds(
-                    metrics.count_third_window(),
-                    THIRD_WINDOW_LAST
                 )
             ]
         }
@@ -114,16 +101,12 @@ impl QuotaMetrics {
         if self.quotas[1].limit != metrics.count_second_window() {
             self.quotas[1].limit = metrics.count_second_window()
         }
-
-        if self.quotas[2].limit != metrics.count_third_window() {
-            self.quotas[2].limit = metrics.count_third_window()
-        }
     }
 
     /// Return a reference to the current `BasicQuota`.
     pub fn get_metrics(
         &self
-    ) -> &[BasicQuota; 3]
+    ) -> &[BasicQuota; N_WINDOWS]
     {
         &self.quotas
     }

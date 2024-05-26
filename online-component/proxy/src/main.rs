@@ -24,9 +24,10 @@ async fn main() {
     tracing_subscriber::fmt().init();
 
     if let Some(config) = Config::load_config() {
+        // Create a `RateLimiter` with two metrics
         let limiter =
             RateLimiter::new(
-                MultiGuard::new(3),
+                MultiGuard::new(2),
                 Cache::default(),
                 RemoteIpIssuer,
             );

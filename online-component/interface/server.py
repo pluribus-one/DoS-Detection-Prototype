@@ -15,7 +15,6 @@ app.config['SECRET_KEY'] = ''.join(random.choices(string.ascii_letters, k=20))
 class MetricsForm(FlaskForm):
     window1 = IntegerField('Window 1:', validators=[DataRequired(), NumberRange(min=1)])
     window2 = IntegerField('Window 2:', validators=[DataRequired(), NumberRange(min=1)])
-    window3 = IntegerField('Window 3:', validators=[DataRequired(), NumberRange(min=1)])
     submit = SubmitField('Invia')
 
 # ---------
@@ -24,15 +23,14 @@ class MetricsForm(FlaskForm):
 @app.route('/', methods=['GET', 'POST'])
 def index():
     form = MetricsForm()
+    
     if request.method == 'POST' and form.validate_on_submit():
         window1 = form.window1.data
         window2 = form.window2.data
-        window3 = form.window3.data
 
         data = {
             "count_first_window" : window1,
             "count_second_window": window2,
-            "count_third_window" : window3,
         }
 
         try:
@@ -53,4 +51,3 @@ def index():
 
 if __name__ == '__main__':
     app.run("0.0.0.0", port=5000)
-
