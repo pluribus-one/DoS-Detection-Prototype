@@ -11,7 +11,7 @@ Therefore, to bring up the infrastructure, it is enough to execute the following
 
 1. Clone this repository:
 ```bash
-git clone https://github.com/christianscano/network_sec_project.git
+git clone https://github.com/pluribus-one/DoS-Detection-Prototype.git
 ```
 2. Run Docker compose:
 

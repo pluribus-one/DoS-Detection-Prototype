@@ -1,4 +1,4 @@
-upstream = "http://demo-ecommerce:3000"
-tls = false
-ssl_key = ""
+upstream        = "http://demo-ecommerce:3000"
+tls             = false
+ssl_key         = ""
 ssl_certificate = ""
