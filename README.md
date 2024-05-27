@@ -24,7 +24,9 @@ The infrastructure exposes the following ports:
 * `5000`: an interface for internal use to interact directly with the reverse proxy.
 * `5001`: an interface to interact with the Machine Learning model (to perform training and send new metrics to the reverse proxy).
 
+### Warning!!
 
+At the first launch, the proxy will not have any matrics. Therefore, if you don't want to use the ML model, you should manually set them by the interface at `5000` port. Otherways, it won't block anything.
 
 
 

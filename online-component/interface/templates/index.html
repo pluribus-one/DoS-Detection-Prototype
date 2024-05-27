@@ -25,13 +25,6 @@
       <span style="color: red">{{ error }}</span><br />
       {% endfor %}
     </div>
-    <div>
-      {{ form.window3.label }}<br />
-      {{ form.window3 }}<br />
-      {% for error in form.window3.errors %}
-      <span style="color: red">{{ error }}</span><br />
-      {% endfor %}
-    </div>
     <div>{{ form.submit() }}</div>
   </form>
 </body>
