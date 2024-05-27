@@ -26,7 +26,7 @@ The infrastructure exposes the following ports:
 
 ### Warning!!
 
-At the first launch, the proxy will not have any matrics. Therefore, if you don't want to use the ML model, you should manually set them by the interface at `5000` port. Otherways, it won't block anything.
+At the first launch, the proxy will not have any metrics. Therefore, if you don't want to use the ML model, you should manually set them by the interface at `5000` port. Otherways, it won't block anything.
 
 
 
